@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Semantic TextNavigator — проверка договоров поставки</title>
+<style>
+  :root {
+    color-scheme: light;
+    --sans: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+
+    --bg: #f3f6fc;
+    --bg-soft: #eef2fa;
+    --card: #ffffff;
+    --ink: #0e1a2b;
+    --ink-2: #33445c;
+    --muted: #6b7c93;
+    --line: #e3e9f3;
+    --line-2: #eef2f9;
+
+    --brand: #2f6bff;
+    --brand-2: #1e4fd8;
+    --brand-soft: #eaf1ff;
+    --brand-line: #c9daff;
+
+    --ok: #0d6b4b; --ok-bg: #e9f8f0; --ok-line: #b3e6cd;
+    --warn: #9a5606; --warn-bg: #fff7e8; --warn-line: #f3d9a4;
+    --no: #ad2118; --no-bg: #fdeceb; --no-line: #f4c6c1;
+
+    --chip: #f2f5fb;
+    --ring: 0 0 0 3px rgba(47, 107, 255, .18);
+    --shadow-sm: 0 1px 2px rgba(14, 26, 43, .05), 0 1px 3px rgba(14, 26, 43, .04);
+    --shadow: 0 10px 28px rgba(14, 26, 43, .07), 0 2px 6px rgba(14, 26, 43, .04);
+    --shadow-lg: 0 26px 70px rgba(9, 17, 32, .22);
+    --r-sm: 8px; --r: 12px; --r-lg: 16px; --r-xl: 20px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #0a1120; --bg-soft: #0f1a2d; --card: #111d31;
+      --ink: #e9effb; --ink-2: #c4d0e5; --muted: #8fa1bb;
+      --line: #1e2b44; --line-2: #17233a;
+      --brand: #6f9bff; --brand-2: #a8c1ff; --brand-soft: #16243f; --brand-line: #24406e;
+      --ok: #63e0ac; --ok-bg: #0c2b20; --ok-line: #1c5b43;
+      --warn: #f3c072; --warn-bg: #2a2110; --warn-line: #5b4520;
+      --no: #ff9d94; --no-bg: #2b1513; --no-line: #5d2a25;
+      --chip: #17243a;
+      --ring: 0 0 0 3px rgba(111, 155, 255, .25);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
+      --shadow: 0 12px 32px rgba(0, 0, 0, .35);
+      --shadow-lg: 0 26px 70px rgba(0, 0, 0, .55);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.6 var(--sans);
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  ::selection { background: var(--brand-soft); color: var(--brand-2); }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- шапка ---------- */
+  header {
+    position: relative; overflow: hidden; color: #fff;
+    background:
+      radial-gradient(900px 380px at 8% -20%, rgba(96, 150, 255, .55), transparent 65%),
+      radial-gradient(700px 300px at 95% 0%, rgba(47, 107, 255, .45), transparent 60%),
+      linear-gradient(135deg, #0b1a3a 0%, #16306e 58%, #2f6bff 100%);
+  }
+  header::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .35;
+    background-image: linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: linear-gradient(180deg, rgba(0,0,0,.9), transparent 85%);
+    -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,.9), transparent 85%);
+  }
+  header .wrap {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding-top: 30px; padding-bottom: 30px;
+  }
+  .logo {
+    width: 46px; height: 46px; flex: none; border-radius: 14px;
+    display: grid; place-items: center; font: 800 15px/1 var(--sans); letter-spacing: .02em;
+    color: #fff; background: linear-gradient(150deg, rgba(255,255,255,.28), rgba(255,255,255,.07));
+    border: 1px solid rgba(255,255,255,.32);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 8px 20px rgba(4, 14, 38, .35);
+  }
+  .hdr-text { flex: 1 1 420px; min-width: 260px; }
+  header h1 { margin: 0; font-size: 21px; font-weight: 750; letter-spacing: -.015em; }
+  header p { margin: 5px 0 0; color: #cfdcff; font-size: 13.5px; max-width: 78ch; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 7px; flex: none;
+    padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    color: #e8f0ff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.24);
+    backdrop-filter: blur(6px);
+  }
+  .badge i { width: 7px; height: 7px; border-radius: 50%; background: #6ff0b6; box-shadow: 0 0 0 3px rgba(111,240,182,.22); }
+
+  main { padding: 26px 0 72px; }
+
+  /* ---------- карточки-секции ---------- */
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--r-xl);
+    padding: 22px; margin-bottom: 20px; box-shadow: var(--shadow);
+  }
+  .card h2 {
+    margin: 0 0 16px; font-size: 15px; font-weight: 750; letter-spacing: .005em;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .card h2 .step {
+    display: inline-grid; place-items: center; width: 26px; height: 26px; flex: none;
+    border-radius: 9px; font: 800 12.5px/1 var(--mono); color: #fff;
+    background: linear-gradient(140deg, var(--brand), var(--brand-2));
+    box-shadow: 0 6px 14px rgba(47, 107, 255, .34), inset 0 1px 0 rgba(255,255,255,.28);
+  }
+
+  /* ---------- форма загрузки ---------- */
+  .grid2 { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 20px; align-items: start; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  label { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+  input[type="date"] {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--card); color: var(--ink); font: 600 14px/1.4 var(--sans);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input[type="date"]:focus { outline: none; border-color: var(--brand); box-shadow: var(--ring); }
+  .hint { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+
+  .dropzone {
+    position: relative; display: grid; place-items: center; text-align: center;
+    border: 1.5px dashed var(--brand-line); border-radius: var(--r-lg);
+    padding: 22px 18px; background: linear-gradient(180deg, var(--brand-soft), transparent 85%);
+    transition: border-color .15s, background .15s, transform .12s;
+  }
+  .dropzone:hover, .dropzone.drag { border-color: var(--brand); background: var(--brand-soft); }
+  .dropzone.drag { transform: scale(1.005); box-shadow: var(--ring); }
+  .dropzone-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .dropzone-inner { display: grid; justify-items: center; gap: 8px; pointer-events: none; }
+  .dropzone-ico {
+    width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
+    background: var(--card); border: 1px solid var(--brand-line); color: var(--brand);
+    box-shadow: var(--shadow-sm);
+  }
+  .dropzone-ico svg { width: 21px; height: 21px; }
+  .dropzone-text { font-weight: 650; font-size: 14px; color: var(--ink); }
+  .dropzone-sub { font-size: 12px; color: var(--muted); }
+
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+
+  button { font: inherit; cursor: pointer; }
+  button.primary {
+    padding: 10px 18px; border: 0; border-radius: 10px; color: #fff; font-weight: 650; font-size: 13.5px;
+    background: linear-gradient(140deg, var(--brand), var(--brand-2));
+    box-shadow: 0 8px 18px rgba(47, 107, 255, .28), inset 0 1px 0 rgba(255,255,255,.22);
+    transition: transform .12s, box-shadow .12s, filter .12s;
+  }
+  button.primary:hover { transform: translateY(-1px); box-shadow: 0 11px 22px rgba(47,107,255,.34); }
+  button.primary:active { transform: translateY(0); filter: brightness(.97); }
+  button.ghost {
+    padding: 8px 14px; border: 1px solid var(--line); border-radius: 9px; font-weight: 600; font-size: 13px;
+    background: var(--card); color: var(--ink-2); box-shadow: var(--shadow-sm); transition: border-color .15s, color .15s;
+  }
+  button.ghost:hover { border-color: var(--brand-line); color: var(--brand-2); }
+  button.mini {
+    padding: 2px 8px; border: 1px solid transparent; border-radius: 7px; font: 650 11.5px/1.7 var(--sans);
+    background: transparent; color: var(--brand-2); transition: background .15s, border-color .15s;
+  }
+  button.mini:hover { background: var(--brand-soft); border-color: var(--brand-line); }
+  button.mini::after { content: " ↗"; font-size: 10.5px; }
+
+  .files { display: flex; flex-wrap: wrap; gap: 7px; margin: 16px 0 0; }
+  .files span {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 550; background: var(--chip); border: 1px solid var(--line); color: var(--ink-2);
+  }
+  .files span.loaded { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok); }
+  .files span.bad { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn); }
+  .files span .muted { color: inherit; opacity: .72; font-weight: 500; }
+
+  .note {
+    margin: 16px 0 0; padding: 12px 14px; border-radius: var(--r);
+    background: var(--bg-soft); border: 1px solid var(--line);
+    font-size: 12.5px; color: var(--ink-2);
+  }
+  .note b { color: var(--ink); }
+
+  /* ---------- сводка ---------- */
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat {
+    position: relative; overflow: hidden; padding: 14px 16px;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-sm);
+  }
+  .stat::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--line); }
+  .stat.brand::before { background: var(--brand); }
+  .stat.ok::before { background: var(--ok); }
+  .stat.warn::before { background: var(--warn); }
+  .stat.no::before { background: var(--no); }
+  .stat b { display: block; font-size: 24px; line-height: 1.15; font-weight: 780; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .stat.ok b { color: var(--ok); }
+  .stat.warn b { color: var(--warn); }
+  .stat.no b { color: var(--no); }
+  .stat span { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+
+  /* ---------- таблица ---------- */
+  .table-wrap { overflow-x: auto; margin: 0 -22px; padding: 0 22px 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead th {
+    text-align: left; padding: 9px 12px; font-size: 10.5px; font-weight: 750;
+    text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
+    background: var(--bg-soft); border-bottom: 1px solid var(--line); white-space: nowrap;
+  }
+  thead th:first-child { border-radius: 10px 0 0 10px; }
+  thead th:last-child { border-radius: 0 10px 10px 0; }
+  tbody td { padding: 13px 12px; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr.main:hover td { background: var(--bg-soft); }
+  tbody tr.main td:first-child { border-radius: 10px 0 0 10px; }
+  tbody tr.main td:last-child { border-radius: 0 10px 10px 0; }
+  tr.sub td { background: var(--bg-soft); border-bottom: 1px solid var(--line); padding: 10px 12px 14px; }
+  tr.sub:last-child td { border-radius: 0 0 10px 10px; border-bottom: 0; }
+  .basis { display: grid; gap: 8px; }
+  .num {
+    display: inline-block; padding: 2px 8px; border-radius: 7px; font: 700 12.5px/1.7 var(--mono);
+    color: var(--brand-2); background: var(--brand-soft); border: 1px solid var(--brand-line); white-space: nowrap;
+  }
+  .val { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .nowrap { white-space: nowrap; }
+  .amount { font-variant-numeric: tabular-nums; }
+  td.status .pill { margin: 0 4px 5px 0; }
+
+  /* ---------- пилюли ---------- */
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 650; white-space: nowrap;
+    background: var(--chip); color: var(--ink-2); border: 1px solid var(--line);
+  }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .6; }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); border-color: var(--ok-line); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-line); }
+  .pill.no { background: var(--no-bg); color: var(--no); border-color: var(--no-line); }
+  .pill.no::before { opacity: .8; }
+
+  /* ---------- основания (цитаты) ---------- */
+  .cite { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 12.5px; color: var(--muted); }
+  .cite-lbl { font-size: 11.5px; font-weight: 750; color: var(--ink-2); text-transform: uppercase; letter-spacing: .05em; }
+  .filetag {
+    display: inline-flex; align-items: center; gap: 5px; padding: 1px 7px; border-radius: 6px;
+    font: 650 11.5px/1.9 var(--mono); color: var(--ink-2);
+    background: var(--card); border: 1px solid var(--line);
+  }
+  .qtext { color: var(--ink-2); }
+  .qtext::before { content: "«"; }
+  .qtext::after { content: "»"; }
+  .cite > details, .cite > .alt, .cite > blockquote { flex-basis: 100%; }
+  details { margin: 2px 0 0; }
+  summary {
+    cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 650; color: var(--brand-2);
+    padding: 1px 8px; border-radius: 6px; border: 1px solid transparent;
+  }
+  summary:hover { background: var(--brand-soft); border-color: var(--brand-line); }
+  summary::-webkit-details-marker { display: none; }
+  summary::marker { content: ""; }
+  summary::before { content: "▸"; font-size: 10px; transition: transform .15s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  blockquote {
+    margin: 6px 0 0; padding: 9px 12px; border-radius: 0 10px 10px 0;
+    background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--brand);
+    font-size: 12.5px; color: var(--ink-2); line-height: 1.55;
+  }
+  .alt { margin-top: 2px; color: var(--no); font-weight: 650; font-size: 12px; }
+  .muted { color: var(--muted); font-weight: 400; }
+  .empty { color: var(--no); font-weight: 700; }
+
+  /* ---------- несогласованные ---------- */
+  .unagreed {
+    position: relative; padding: 15px 16px 16px 18px; margin-bottom: 12px;
+    border: 1px solid var(--warn-line); border-radius: var(--r-lg);
+    background: linear-gradient(180deg, var(--warn-bg), var(--card) 140%);
+  }
+  .unagreed:last-child { margin-bottom: 0; }
+  .unagreed::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 3px; background: var(--warn); }
+  .unagreed .qt {
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    font-size: 13.5px; font-weight: 750; color: var(--ink); margin-bottom: 6px;
+  }
+  .unagreed .qt .tag {
+    padding: 1px 7px; border-radius: 6px; font: 700 11.5px/1.8 var(--mono);
+    background: var(--card); border: 1px solid var(--warn-line); color: var(--warn);
+  }
+  .unagreed .cite { margin-top: 4px; }
+
+  /* ---------- вопросы ---------- */
+  .q {
+    position: relative; padding: 16px 18px; margin-bottom: 12px;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-sm);
+  }
+  .q:last-child { margin-bottom: 0; }
+  .q .qt { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; font-weight: 700; color: var(--ink); }
+  .qn {
+    flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 8px;
+    font: 800 11px/1 var(--mono); color: var(--brand-2); background: var(--brand-soft); border: 1px solid var(--brand-line);
+  }
+  .q .ans { margin-top: 9px; font-size: 14px; color: var(--ink-2); }
+  .q .ans .cite { margin-top: 6px; }
+  .q4-item + .q4-item { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+  .q4-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .basis .cite + .cite { margin-top: 0; }
+  .q .ans .val { color: var(--ink); font-size: 15.5px; }
+  .q .ans b { color: var(--ink); }
+
+  .empty-state { text-align: center; padding: 28px 12px; color: var(--muted); font-size: 13.5px; }
+  .empty-state .ico { font-size: 26px; margin-bottom: 6px; opacity: .7; }
+
+  .feat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .feat-i { padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg-soft); }
+  .feat-i b { display: block; font-size: 13.5px; font-weight: 700; margin: 6px 0 3px; }
+  .feat-i p { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+  .fi {
+    display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px;
+    font: 800 11px/1 var(--mono); color: var(--brand-2); background: var(--card); border: 1px solid var(--brand-line);
+  }
+
+  /* ---------- просмотрщик ---------- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 24px;
+    background: rgba(8, 15, 30, .55); backdrop-filter: blur(4px);
+    animation: fade .16s ease;
+  }
+  .modal {
+    display: flex; flex-direction: column; width: min(900px, 100%); max-height: 84vh;
+    background: var(--card); color: var(--ink); border: 1px solid var(--line);
+    border-radius: var(--r-lg); box-shadow: var(--shadow-lg); animation: pop .18s ease;
+  }
+  .modal-h {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+  }
+  .modal-h b { font: 700 12.5px/1.5 var(--mono); color: var(--ink-2); }
+  .modal-b { overflow: auto; padding: 8px 14px 18px; font-size: 14px; }
+  .modal-b p { margin: 0; padding: 8px 10px; border-radius: 8px; border-left: 3px solid transparent; color: var(--ink-2); }
+  .modal-b p.hl {
+    background: var(--warn-bg); border-left-color: var(--warn); color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--warn-line);
+  }
+  @keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.99) } to { opacity: 1; transform: none } }
+
+  /* ---------- адаптив ---------- */
+  @media (max-width: 900px) {
+    .grid2 { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .feat { grid-template-columns: 1fr; }
+    main { padding-top: 18px; }
+    .wrap { padding: 0 16px; }
+    .table-wrap { margin: 0 -16px; padding: 0 16px; }
+    .card { padding: 18px 16px; border-radius: var(--r-lg); }
+    header .wrap { padding-top: 22px; padding-bottom: 22px; }
+    header h1 { font-size: 19px; }
+    .badge { order: 3; }
+  }
+  @media (max-width: 720px) {
+    table thead { display: none; }
+    .table-wrap { overflow: visible; margin: 0; padding: 0; }
+    .nowrap, .val, .pill, .num, .filetag { white-space: normal; }
+    tbody tr.main { display: block; padding: 4px 0 0; border-bottom: 1px solid var(--line); }
+    tbody tr.main td { display: flex; flex-wrap: wrap; gap: 6px 10px; border: 0; padding: 5px 12px; }
+    tbody tr.main td::before {
+      content: attr(data-label); flex: none; width: 100px;
+      font-size: 10.5px; font-weight: 750; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--muted); padding-top: 3px;
+    }
+    tbody tr.main td > * { min-width: 0; max-width: 100%; }
+    tbody tr.main td.status { display: block; }
+    tbody tr.main td.status::before { display: block; width: auto; margin-bottom: 4px; padding-top: 0; }
+    td.status .pill { border-radius: 9px; align-items: flex-start; }
+    td.status .pill::before { margin-top: 6px; }
+    tbody tr.main td:first-child, tbody tr.main td:last-child { border-radius: 0; }
+    tr.sub { display: block; }
+    tr.sub td { padding: 8px 12px 14px; }
+    .cite, .qtext { overflow-wrap: anywhere; }
+    .modal { max-height: 88vh; }
+    .overlay { padding: 12px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+
+  @media print {
+    body { background: #fff; }
+    header { background: none !important; color: #000; padding: 0; }
+    header p { color: #444; }
+    header::after, .dropzone, .row, .files, .mini, .overlay, .stats { display: none !important; }
+    .card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+    main { padding: 0; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="logo" aria-hidden="true">ST</div>
+    <div class="hdr-text">
+      <h1>Semantic TextNavigator</h1>
+      <p>Проверка условий договора поставки: сумма и срок на дату проверки — с цитатой и переходом к абзацу.</p>
+    </div>
+    <span class="badge"><i></i>Правила + цитаты, без LLM и внешних API</span>
+  </div>
+</header>
+<main>
+  <div class="wrap">
+  <div class="card">
+    <h2><span class="step">1</span> Загрузка документов</h2>
+    <div class="grid2">
+      <div class="field">
+        <label for="checkDate">Дата проверки условий</label>
+        <input type="date" id="checkDate" value="2026-03-10">
+        <p class="hint">По умолчанию 10 марта 2026 года.</p>
+      </div>
+      <div class="field">
+        <label for="files">Документы (.txt)</label>
+        <div class="dropzone">
+          <input type="file" id="files" class="dropzone-input" multiple accept=".txt,text/plain" aria-label="Выберите TXT-файлы">
+          <div class="dropzone-inner">
+            <span class="dropzone-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>
+            <div>
+              <div class="dropzone-text">Перетащите файлы или выберите на компьютере</div>
+              <div class="dropzone-sub">Можно загрузить сразу несколько договоров и допсоглашений</div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <button id="loadDemo" class="ghost">Загрузить учебный пример</button>
+          <span class="hint" style="margin:0">6 документов из комплекта задания (вшиты 1:1)</span>
+        </div>
+      </div>
+    </div>
+    <div class="files" id="fileList"><em class="hint">Файлы не выбраны</em></div>
+    <p class="note">Условия изменяет только <b>подписанное допсоглашение, вставшее в силу к дате проверки</b>. Письмо и проект — отдельно, как сведения для проверки. Значения, которые не удалось определить однозначно, помечаются «требуется проверка»; отсутствующие — «нет данных».</p>
+  </div>
+  <div id="results" aria-live="polite"></div>
+  </div>
+</main>
+<script>
+"use strict";
+/* ================= УТИЛИТЫ ================= */
+const CHECK_DEFAULT = "2026-03-10";
+const RAW = new Map(); // имя файла -> исходный текст (для просмотра абзаца)
+
+function esc(s){
+  return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+}
+// «1 200 000» / «1250000» -> число
+function cleanNum(s){ return parseInt(String(s).replace(/[\s\u00a0\u202f]/g, ""), 10); }
+// «10.03.2026» -> Date | null
+function parseDate(str){
+  if(!str) return null;
+  const m = String(str).match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if(!m) return null;
+  return new Date(+m[3], +m[2] - 1, +m[1]);
+}
+// «10.03.2026» -> YYYYMMDD (для сравнения)
+function dateKey(str){
+  const d = parseDate(str);
+  return d ? d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate() : null;
+}
+// «2026-03-10» (ISO из input) -> «10.03.2026»
+function ruDate(iso){
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : String(iso || "");
+}
+function fmtNum(n){ return n == null ? null : Number(n).toLocaleString("ru-RU"); }
+
+// предложения: границы по . ! ? + переводу строки
+function sentences(text){
+  return String(text).replace(/\r/g, "")
+    .split(/[.!?]\s+|\n+/)
+    .map(s => s.trim()).filter(Boolean);
+}
+// абзацы (блоки через пустую строку; иначе — по строкам)
+function paragraphs(text){
+  const t = String(text).replace(/\r/g, "").trim();
+  let blocks = t.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+  if(blocks.length < 2) blocks = t.split(/\n/).map(s => s.trim()).filter(Boolean);
+  return blocks;
+}
+// найти абзац по фрагменту (для «перехода к абзацу»)
+function locate(text, needle){
+  const ps = paragraphs(text);
+  const total = ps.length;
+  if(!needle) return {para: null, index: null, total};
+  const n = String(needle).slice(0, 60);
+  const i = ps.findIndex(p => p.includes(n));
+  return i < 0 ? {para: null, index: null, total} : {para: ps[i], index: i + 1, total};
+}
+// числа-денежные суммы: «1 200 000», «1250000», «2 500 000,00»; даты/пункты/проценты отбрасываем
+function moneyCandidates(text){
+  const s = String(text)
+    .replace(/\d{1,2}\.\d{1,2}\.\d{4}/g, " ")     // даты
+    .replace(/\d{1,2}\.\d{1,2}(?!\d)/g, " ")      // номера пунктов 2.1
+    .replace(/\d+(?:[.,]\d+)?\s*%/g, " ");        // проценты
+  const re = /(^|[^\d])(\d{1,3}(?:[\s\u00a0\u202f]\d{3})+|\d{4,})(?:[.,]\d{1,2})?(?!\d)/g;
+  const out = [];
+  let m;
+  while((m = re.exec(s))){
+    const v = cleanNum(m[2]);
+    if(v != null && v >= 1000) out.push(v);
+  }
+  return out;
+}
+// текст в «...» (русские кавычки)
+function quoteBlocks(text){
+  const out = []; const re = /«([^«»]*)»/g;
+  let m;
+  while((m = re.exec(text))) out.push(m[1].trim());
+  return out;
+}
+
+/* ================= КЛАССИФИКАЦИЯ ================= */
+// шапка документа: имя файла + первые строки (классифицируем по шапке, а не по всему тексту)
+function headOf(name, text){
+  const lines = String(text).replace(/\r/g, "").split("\n").map(l => l.trim()).filter(Boolean).slice(0, 7).join("\n");
+  return (String(name || "") + "\n" + lines).toUpperCase();
+}
+function classify(name, text){
+  const H = headOf(name, text);
+  if(/ПРОЕКТ\s+(ДОПОЛНИТЕЛЬНОГО\s+)?СОГЛАШЕНИЯ/.test(H)) return "amendment_draft";
+  if(/(^|\n)[^\n]*ПИСЬМО/.test(H) || /\nОТ:|\nКОМУ:|\nТЕМА:/.test(H)) return "email";
+  if(/ДОПОЛНИТЕЛЬНОЕ\s+СОГЛАШЕНИЕ/.test(H)) return "amendment_signed";
+  if(/ДОГОВОР/.test(H)) return "contract";
+  return "other";
+}
+// подписан ли документ: решает строка «Статус» (плюс первые строки), а не любое слово «подписание»
+function signedStatus(text){
+  const lines = String(text).replace(/\r/g, "").split("\n");
+  const head = lines.slice(0, 5).join("\n");
+  const status = lines.filter(l => /^\s*статус/i.test(l)).join("\n");
+  return (status + "\n" + head).toLowerCase();
+}
+function detectSigned(text){
+  const S = signedStatus(text);
+  const negative = /(^|[^а-я])(не\s+(был[а-я]*\s+|является\s+)?подписан|не\s+подписано|проект\s+на\s+согласовании|подписание\s+не\s+состоялось)/;
+  if(negative.test(S)) return false;
+  const positive = /подписан[а-я]*\s+(обеими|сторон)|подписан[а-я]*\s+(обеими\s+)?сторон|подписан[а-я]*\s+\d{1,2}\.\d{1,2}\.\d{4}/;
+  return positive.test(S);
+}
+
+/* ================= ИЗВЛЕЧЕНИЕ ПОЛЕЙ ================= */
+// сумма: ищем предложения про стоимость, оцениваем и берём лучший кандидат
+function bestSum(text){
+  const cands = [];
+  for(const s of sentences(text)){
+    if(!/стоимост/i.test(s)) continue;
+    const nums = moneyCandidates(s);
+    if(!nums.length) continue;
+    let score = 0;
+    if(/общ[а-я]*\s+стоимост/i.test(s)) score += 4;
+    if(/стоимост[а-я]*\s+(поставки|договора|товара)/i.test(s)) score += 2;
+    if(/составля|равна|является|итогов|изменить/i.test(s)) score += 1;
+    if(/доставк|аванс|лимит|бюджет|не\s+являет|неустойк|штраф|залог|задат/i.test(s)) score -= 5;
+    cands.push({value: nums[0], quote: s, score});
+  }
+  if(!cands.length){
+    const hint = sentences(text).find(s => /стоимост/i.test(s)) || null;
+    return {value: null, quote: null, para: null, paraIndex: null, paraTotal: null, hint, needsReview: true, alternatives: []};
+  }
+  cands.sort((a, b) => b.score - a.score);
+  const best = cands[0];
+  // все кандидаты «подозрительные» — не выдумываем значение
+  if(best.score <= 0){
+    return {value: null, quote: null, para: null, paraIndex: null, paraTotal: null, hint: best.quote, needsReview: true, alternatives: cands.slice(0, 3).map(c => c.value)};
+  }
+  const rivals = cands.filter(c => c.value !== best.value && c.score === best.score).map(c => c.value);
+  // близкий по весу конкурент с другим значением — тоже повод для ручной проверки
+  const near = cands.filter(c => c.value !== best.value && c.score >= best.score - 2).map(c => c.value);
+  const alts = [...new Set([...rivals, ...near])];
+  const loc = locate(text, best.quote);
+  return {
+    value: best.value, quote: best.quote,
+    para: loc.para, paraIndex: loc.index, paraTotal: loc.total,
+    hint: null,
+    needsReview: alts.length > 0,
+    alternatives: alts
+  };
+}
+// срок поставки: только предложения про поставку, без сроков оплаты/приёмки
+function deliveryFrom(text){
+  for(const s of sentences(text)){
+    if(!/постав/i.test(s)) continue;
+    if(/оплат|аванс|платеж|приемк/i.test(s) && !/обязуется\s+поставить/i.test(s)) continue;
+    const m = s.match(/(?:не\s+позднее|в\s+срок\s+до)\s*(\d{1,2}\.\d{1,2}\.\d{4})/i);
+    if(m){
+      const quote = s.replace(/[.;,\s]+$/, "");
+      const loc = locate(text, quote);
+      return {date: m[1], quote, para: loc.para, paraIndex: loc.index, paraTotal: loc.total};
+    }
+  }
+  return {date: null, quote: null, para: null, paraIndex: null, paraTotal: null};
+}
+
+function extractContract(text){
+  const number = (text.match(/(STN-\d+)/i) || [])[1] || null;
+  const supplierRaw = (text.match(/Поставщик:\s*(ООО\s*(?:«[^»]*»|[^.;\n]+))/i) || [])[1] || null;
+  const supplier = supplierRaw ? supplierRaw.trim().replace(/[.,;]+$/, "") : null;
+  const sum = bestSum(text);
+  const del = deliveryFrom(text);
+  return {
+    type: "contract", number, supplier,
+    sum: sum.value, sumQuote: sum.quote, sumPara: sum.para,
+    sumParaIndex: sum.paraIndex, sumParaTotal: sum.paraTotal, sumHint: sum.hint,
+    sumNeedsReview: sum.needsReview, sumAlternatives: sum.alternatives,
+    delivery: del.date, delQuote: del.quote, delPara: del.para,
+    delParaIndex: del.paraIndex, delParaTotal: del.paraTotal,
+    deliveryNeedsReview: false
+  };
+}
+
+function extractAmendment(text, cls){
+  const number = (text.match(/STN-\d+/i) || [])[0] || null;
+  const signedDate = (text.match(/подписан[а-я]*[^\d\n]{0,40}(\d{1,2}\.\d{1,2}\.\d{4})/i) || [])[1] || null;
+  const mEff = text.match(/вступ[а-я]*\s+в\s+силу\s+с?\s*(\d{1,2}\.\d{1,2}\.\d{4})/i);
+  let effective = mEff ? mEff[1] : null;
+  if(!effective && /вступ[а-я]*\s+в\s+силу\s+с\s+момента\s+подписания/i.test(text)) effective = signedDate;
+  const isSigned = cls === "amendment_signed" && detectSigned(text);
+
+  // области изменения: текст в «...» внутри пунктов «изложить в редакции»,
+  // иначе — сами пункты («предлагается изменить ... на ...»)
+  let scopes = [];
+  for(const p of paragraphs(text)){
+    if(!/редакци|изложить/i.test(p)) continue;
+    const qs = quoteBlocks(p).filter(q => q.length > 20);
+    if(qs.length) scopes.push(...qs);
+  }
+  if(!scopes.length){
+    scopes = paragraphs(text).filter(p => /изложить|редакци|предлагается\s+изменить/i.test(p));
+  }
+  if(!scopes.length) scopes = quoteBlocks(text).filter(q => q.length > 40);
+  if(!scopes.length) scopes = [text];
+
+  let sum = null, sumQuote = null, sumPara = null, sumParaIndex = null, sumParaTotal = null, sumNeedsReview = false, sumAlternatives = [];
+  let delivery = null, delQuote = null, delPara = null, delParaIndex = null, delParaTotal = null, firstQuote = null, firstPara = null;
+
+  for(const scope of scopes){
+    if(!firstQuote) firstQuote = scope;
+    if(!firstPara){ const loc = locate(text, scope); firstPara = loc.para; }
+    if(sum === null){
+      const s = bestSum(scope);
+      if(s.value != null){
+        sum = s.value; sumQuote = s.quote; sumNeedsReview = s.needsReview; sumAlternatives = s.alternatives;
+        const loc = locate(text, s.quote); sumPara = loc.para; sumParaIndex = loc.index; sumParaTotal = loc.total;
+      }
+    }
+    if(delivery === null){
+      const d = deliveryFrom(scope);
+      if(d.date){
+        delivery = d.date; delQuote = d.quote;
+        const loc = locate(text, d.quote);
+        delPara = loc.para; delParaIndex = loc.index; delParaTotal = loc.total;
+      } else {
+        // проекты: «изменить срок поставки на DD.MM.YYYY»
+        const m = scope.match(/срок[а-я]*\s+поставк[а-я]*\s+(?:на|—|-)\s*(\d{1,2}\.\d{1,2}\.\d{4})/i);
+        if(m){ delivery = m[1]; delQuote = m[0]; const loc = locate(text, m[0]); delPara = loc.para; delParaIndex = loc.index; delParaTotal = loc.total; }
+      }
+    }
+  }
+  return {
+    type: "amendment", number, effective, signedDate, isSigned,
+    sum, sumQuote, sumPara, sumParaIndex, sumParaTotal, sumNeedsReview, sumAlternatives,
+    delivery, delQuote, delPara, delParaIndex, delParaTotal,
+    quote: sumQuote || delQuote || firstQuote, para: sumPara || delPara || firstPara
+  };
+}
+
+function extractEmail(text){
+  const number = (text.match(/STN-\d+/i) || [])[0] || null;
+  const move = text.match(/перен[ео]с[а-я]*[^.\n]{2,60}?с\s*(\d{1,2}\.\d{1,2}\.\d{4})[^.\n]{0,40}?на\s*(\d{1,2}\.\d{1,2}\.\d{4})/i);
+  const quote = sentences(text).find(s => /перен|сдвин|измен/i.test(s) && /STN-\d+/i.test(s)) || null;
+  const loc = locate(text, quote);
+  return {
+    type: "email", number,
+    from: move ? move[1] : null,
+    to: move ? move[2] : null,
+    quote, para: loc.para, paraIndex: loc.index, paraTotal: loc.total
+  };
+}
+
+function parseDoc(name, text){
+  const cls = classify(name, text);
+  let r;
+  if(cls === "contract") r = extractContract(text);
+  else if(cls === "amendment_signed" || cls === "amendment_draft") r = extractAmendment(text, cls);
+  else if(cls === "email") r = extractEmail(text);
+  else r = {type: "other", number: null};
+  r.name = name;
+  r.cls = cls;
+  r.raw = text;
+  RAW.set(name, text);
+  return r;
+}
+
+/* ================= ДВИЖОК АНАЛИЗА ================= */
+function fieldsOf(d, target){
+  const f = [];
+  if(d.sum != null) f.push({field: "sum", value: d.sum, prev: target ? target.sum : null});
+  const del = d.delivery || (d.type === "email" ? d.to : null);
+  if(del) f.push({field: "delivery", value: del, prev: target ? target.delivery : null});
+  return f;
+}
+
+function analyze(docs, checkDateStr){
+  const iso = checkDateStr || CHECK_DEFAULT;
+  const checkKey = dateKey(ruDate(iso));
+  const contracts = new Map();
+  const unagreed = [];
+
+  for(const d of docs){
+    if(d.type === "contract" && d.number && !contracts.has(d.number)){
+      contracts.set(d.number, {
+        number: d.number, supplier: d.supplier,
+        sum: d.sum,
+        sumSource: {
+          file: d.name, quote: d.sumQuote, para: d.sumPara, paraIndex: d.sumParaIndex, paraTotal: d.sumParaTotal,
+          hint: d.sumHint, needsReview: d.sumNeedsReview, alternatives: d.sumAlternatives, changed: false
+        },
+        delivery: d.delivery,
+        deliverySource: {
+          file: d.name, quote: d.delQuote, para: d.delPara, paraIndex: d.delParaIndex, paraTotal: d.delParaTotal,
+          changed: false, needsReview: false, alternatives: []
+        },
+        prevSum: null, prevDelivery: null,
+        unagreed: []
+      });
+    }
+  }
+
+  // подписанные соглашения применяем в хронологическом порядке вступления в силу, не в порядке загрузки
+  const amends = docs.filter(d => d.type === "amendment").sort((a, b) => {
+    const ka = dateKey(a.effective), kb = dateKey(b.effective);
+    return (ka == null ? Number.MAX_SAFE_INTEGER : ka) - (kb == null ? Number.MAX_SAFE_INTEGER : kb);
+  });
+
+  for(const d of amends){
+    const target = d.number ? contracts.get(d.number) : null;
+    const isDraft = d.cls === "amendment_draft" || !d.isSigned;
+    const effKey = dateKey(d.effective);
+
+    if(isDraft){
+      unagreed.push({contract: d.number || "—", kind: d.cls === "amendment_draft" ? "проект допсоглашения — не подписан" : "допсоглашение без подтверждения подписания", doc: d, effective: d.effective, fields: fieldsOf(d, target)});
+      continue;
+    }
+    if(effKey == null){
+      unagreed.push({contract: d.number || "—", kind: "подписано, но дата вступления в силу не найдена — требуется проверка", doc: d, effective: null, fields: fieldsOf(d, target)});
+      continue;
+    }
+    if(checkKey == null || effKey > checkKey){
+      unagreed.push({contract: d.number || "—", kind: `подписано, вступает в силу ${d.effective} — позже даты проверки`, doc: d, effective: d.effective, fields: fieldsOf(d, target)});
+      continue;
+    }
+    if(!d.number){
+      unagreed.push({contract: "—", kind: "подписано, но номер договора не указан — требуется проверка", doc: d, effective: d.effective, fields: fieldsOf(d, null)});
+      continue;
+    }
+    if(!target){
+      unagreed.push({contract: d.number, kind: "действующее допсоглашение, но договор не загружен — требуется проверка", doc: d, effective: d.effective, fields: fieldsOf(d, null)});
+      continue;
+    }
+    if(d.sum != null){
+      target.prevSum = target.sum;
+      target.sum = d.sum;
+      target.sumSource = {
+        file: d.name, quote: d.sumQuote, para: d.sumPara, paraIndex: d.sumParaIndex, paraTotal: d.sumParaTotal,
+        hint: null, needsReview: d.sumNeedsReview, alternatives: d.sumAlternatives, changed: true
+      };
+    }
+    if(d.delivery){
+      target.prevDelivery = target.delivery;
+      target.delivery = d.delivery;
+      target.deliverySource = {
+        file: d.name, quote: d.delQuote, para: d.delPara, paraIndex: d.delParaIndex, paraTotal: d.delParaTotal,
+        changed: true, needsReview: false, alternatives: []
+      };
+    }
+    // статус «изменено» — только если реально изменилось поле, а не просто «соглашение в силе»
+  }
+
+  for(const d of docs){
+    if(d.type !== "email") continue;
+    const target = d.number ? contracts.get(d.number) : null;
+    unagreed.push({contract: d.number || "—", kind: "письмо поставщика — предложение, не согласовано", doc: d, effective: null, fields: fieldsOf(d, target)});
+  }
+
+  for(const c of contracts.values()){
+    c.unagreed = unagreed.filter(u => u.contract === c.number);
+  }
+
+  const list = [...contracts.values()].sort((a, b) => String(a.number || "").localeCompare(String(b.number || ""), undefined, {numeric: true}));
+  return {contracts: list, unagreed, checkKey, checkDate: ruDate(iso), checkISO: iso};
+}
+
+/* ================= РЕНДЕРИНГ ================= */
+function citeHTML(src, opts){
+  const o = opts || {};
+  if(!src) return "";
+  const parts = [];
+  if(o.label) parts.push(`<span class="cite-lbl">${esc(o.label)}</span>`);
+  if(src.file) parts.push(`<span class="filetag">${esc(src.file)}</span>`);
+  parts.push(src.quote
+    ? `<span class="qtext">${esc(src.quote)}</span>`
+    : `<span class="muted">${esc(o.empty || "значение в тексте не найдено — требуется ручная проверка")}</span>`);
+  const needle = src.quote || src.para || src.hint || "";
+  if(needle && src.file){
+    parts.push(`<button class="mini" data-file="${esc(src.file)}" data-needle="${esc(String(needle).slice(0, 120))}">открыть в тексте</button>`);
+  }
+  let tail = "";
+  if(src.para && src.para !== src.quote){
+    tail += `<details><summary>абзац ${src.paraIndex || "?"} из ${src.paraTotal || "?"}</summary><blockquote>${esc(src.para)}</blockquote></details>`;
+  } else if(src.paraIndex){
+    tail += `<span class="muted">абзац ${src.paraIndex} из ${src.paraTotal}</span>`;
+  }
+  if(src.alternatives && src.alternatives.length){
+    tail += `<div class="alt">Найдено несколько значений: ${src.alternatives.map(v => esc(fmtNum(v)) + " ₽").join(", ")} — требуется ручная проверка.</div>`;
+  }
+  if(src.hint) tail += `<blockquote>${esc(src.hint)}</blockquote>`;
+  return `<div class="cite">${parts.join("")}${tail}</div>`;
+}
+
+function fieldPill(c, field){
+  const src = field === "sum" ? c.sumSource : c.deliverySource;
+  const label = field === "sum" ? "сумма" : "срок";
+  const value = field === "sum" ? c.sum : c.delivery;
+  if(value == null) return `<span class="pill no">${label}: нет данных</span>`;
+  if(src.needsReview) return `<span class="pill warn">${label}: требуется проверка</span>`;
+  if(src.changed) return `<span class="pill ok">${label}: изменено (${esc(src.file)})</span>`;
+  return `<span class="pill">${label}: по договору</span>`;
+}
+
+function renderSummary(res){
+  if(!res.contracts.length) return "";
+  const total = res.contracts.length;
+  const changed = res.contracts.filter(c => c.sumSource.changed || c.deliverySource.changed).length;
+  const review = res.contracts.filter(c => c.sumSource.needsReview || c.deliverySource.needsReview || c.sum == null || !c.delivery).length;
+  const un = res.unagreed.length;
+  const stat = (tone, value, label) => `<div class="stat ${tone}"><b>${value}</b><span>${label}</span></div>`;
+  return `<div class="stats">
+    ${stat("brand", total, "договоры")}
+    ${stat("ok", changed, "с изменениями")}
+    ${stat(review ? "warn" : "", review, "требуют внимания")}
+    ${stat(un ? "no" : "", un, "не согласованы")}
+  </div>`;
+}
+
+function renderTable(res){
+  const rows = res.contracts.map(c => `
+    <tr class="main">
+      <td data-label="Договор"><span class="num">${esc(c.number || "—")}</span></td>
+      <td data-label="Поставщик">${esc(c.supplier || "—")}</td>
+      <td class="nowrap" data-label="Сумма">${c.sum == null ? '<span class="empty">нет данных</span>' : `<span class="val amount">${esc(fmtNum(c.sum))} ₽</span>`}</td>
+      <td class="nowrap" data-label="Срок поставки">${c.delivery ? `<span class="val">${esc(c.delivery)}</span>` : '<span class="empty">нет данных</span>'}</td>
+      <td class="status" data-label="Статус">${fieldPill(c, "sum")}${fieldPill(c, "delivery")}${c.unagreed.length ? '<span class="pill warn">есть несогласованное предложение</span>' : ""}</td>
+    </tr>
+    <tr class="sub"><td colspan="5"><div class="basis">
+      ${citeHTML(c.sumSource, {label: "Сумма", empty: "числовое значение стоимости в тексте не найдено"})}
+      ${citeHTML(c.deliverySource, {label: "Срок поставки", empty: "срок поставки в тексте не найден"})}
+    </div></td></tr>`).join("");
+  return `<div class="card"><h2><span class="step">2</span> Условия по договорам (на ${esc(res.checkDate)})</h2>
+    <div class="table-wrap"><table><thead><tr><th>Договор</th><th>Поставщик</th><th>Сумма</th><th>Срок поставки</th><th>Статус (сумма / срок)</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="5" class="empty-state">Договоры не найдены. Проверьте, что файлы загружены.</td></tr>'}</tbody></table></div></div>`;
+}
+
+function renderUnagreed(res){
+  if(!res.unagreed.length){
+    return `<div class="card"><h2><span class="step">3</span> Несогласованные изменения</h2><p class="hint">Проектов допсоглашений и писем с предложенными изменениями нет.</p></div>`;
+  }
+  const items = res.unagreed.map(u => {
+    const d = u.doc;
+    const prop = [];
+    if(d.type === "email" && d.from && d.to) prop.push(`перенос срока с ${d.from} на ${d.to}`);
+    else {
+      if(d.sum != null) prop.push(`сумма → ${fmtNum(d.sum)} ₽`);
+      if(d.delivery) prop.push(`срок → ${d.delivery}`);
+    }
+    const label = u.contract === "—" ? "документ без номера договора" : u.contract;
+    const signed = d.isSigned;
+    return `<div class="unagreed">
+      <div class="qt"><span class="tag">${esc(label)}</span><span>${esc(u.kind)}</span></div>
+      ${prop.length ? `<div class="cite"><b>${signed ? "Изменяет" : "Предложено"}:</b> ${esc(prop.join("; "))}. <b>${signed ? "К дате проверки не применяется." : "Действующие условия не меняет."}</b></div>` : ""}
+      ${citeHTML({file: d.name, quote: d.quote || d.sumQuote || d.delQuote, para: d.para || d.sumPara || d.delPara, paraIndex: d.paraIndex || d.sumParaIndex || d.delParaIndex, paraTotal: d.paraTotal || d.sumParaTotal || d.delParaTotal}, {label: "Документ", empty: "цитата не найдена — откройте документ"})}
+    </div>`;
+  }).join("");
+  return `<div class="card"><h2><span class="step">3</span> Несогласованные изменения (не влияют на условия)</h2>${items}</div>`;
+}
+
+function questionBox(q, ans, i){ return `<div class="q"><div class="qt"><span class="qn">Q${i}</span><span>${q}</span></div><div class="ans">${ans}</div></div>`; }
+function missingAnswer(n){ return `<span class="empty">нет данных</span> — договор ${esc(n)} не найден среди загруженных документов.`; }
+
+function deliveryAnswer(c){
+  if(c.delivery == null){
+    return `<span class="empty">нет данных</span> — срок поставки в документах договора не найден.` +
+      citeHTML(c.deliverySource, {label: "Основание", empty: "срок поставки не найден"});
+  }
+  let head = `<span class="val">${esc(c.delivery)}</span>`;
+  if(c.deliverySource.changed){
+    head += ` — изменено документом <b>${esc(c.deliverySource.file)}</b>`;
+    if(c.prevDelivery) head += ` (в договоре было ${esc(c.prevDelivery)})`;
+  } else {
+    head += ` — по договору <b>${esc(c.deliverySource.file)}</b>`;
+  }
+  if(c.deliverySource.needsReview) head += ` <span class="pill warn">требуется проверка</span>`;
+  return head + citeHTML(c.deliverySource, {label: "Основание"});
+}
+
+function sumAnswer(c){
+  if(c.sum == null){
+    return `<span class="empty">нет данных</span> — числовое значение стоимости в тексте договора не найдено (сумма определяется отдельным документом либо не указана).` +
+      citeHTML(c.sumSource, {label: "Пояснение", empty: "числовое значение стоимости в тексте не найдено"});
+  }
+  let head = `<span class="val">${esc(fmtNum(c.sum))} ₽</span>`;
+  if(c.sumSource.changed){
+    head += ` — изменено документом <b>${esc(c.sumSource.file)}</b>`;
+    if(c.prevSum != null) head += ` (в договоре было ${esc(fmtNum(c.prevSum))} ₽)`;
+  } else {
+    head += ` — по договору <b>${esc(c.sumSource.file)}</b>`;
+  }
+  if(c.sumSource.needsReview) head += ` <span class="pill warn">требуется проверка</span>`;
+  return head + citeHTML(c.sumSource, {label: "Основание"});
+}
+
+function q4Answer(res){
+  const APR1 = dateKey("01.04.2026");
+  const early = res.contracts.filter(c => c.delivery && dateKey(c.delivery) != null && dateKey(c.delivery) < APR1);
+  if(!early.length){
+    return `<span class="empty">нет данных</span> — договоров с действующим сроком поставки ранее 01.04.2026 не найдено.`;
+  }
+  return early.map(c => {
+    const proposals = c.unagreed.filter(u => u.fields.some(f => f.field === "delivery"));
+    const src = c.deliverySource;
+    const base = `<div class="q4-row"><span class="num">${esc(c.number)}</span><span class="val">${esc(c.delivery)}</span><span class="muted">${src.changed ? "изменено" : "по договору"}: ${esc(src.file)}</span></div>`;
+    const extra = proposals.length
+      ? proposals.map(u => {
+          const f = u.fields.find(x => x.field === "delivery");
+          return `<div class="cite"><span class="cite-lbl">Несогласовано</span><span>${esc(u.kind)} — предложено ${esc(f.value)} (${esc(u.doc.name)})</span></div>`;
+        }).join("")
+      : `<div class="cite"><span class="muted">несогласованных изменений срока нет</span></div>`;
+    return `<div class="q4-item">${base}${extra}</div>`;
+  }).join("");
+}
+
+function renderQuestions(res){
+  const by = n => res.contracts.find(c => c.number === n) || null;
+  const c1 = by("STN-101"), c2 = by("STN-102"), c3 = by("STN-103");
+  return `<div class="card"><h2><span class="step">4</span> Ответы на вопросы</h2>
+    ${!c1 && !c2 && !c3 ? `<p class="hint">Вопросы 1–3 сформулированы по договорам STN-101…STN-103 из учебного набора. В загруженных файлах этих договоров нет — значения не подставляются, чтобы не выдумывать данные.</p>` : ""}
+    ${questionBox(`Какой срок поставки действует по договору STN-101 на ${esc(res.checkDate)}?`, c1 ? deliveryAnswer(c1) : missingAnswer("STN-101"), 1)}
+    ${questionBox("Какова сумма договора STN-102?", c2 ? sumAnswer(c2) : missingAnswer("STN-102"), 2)}
+    ${questionBox("Какова сумма договора STN-103?", c3 ? sumAnswer(c3) : missingAnswer("STN-103"), 3)}
+    ${questionBox("По каким договорам поставка запланирована раньше 1 апреля 2026 года и есть ли несогласованные изменения срока?", q4Answer(res), 4)}
+  </div>`;
+}
+
+/* ================= ПРОСМОТР ИСХОДНОГО ТЕКСТА ================= */
+function openViewer(file, needle){
+  const text = RAW.get(file);
+  if(!text) return;
+  const ps = paragraphs(text);
+  const n = needle ? String(needle).slice(0, 60) : "";
+  const idx = n ? ps.findIndex(p => p.includes(n)) : -1;
+  const body = ps.map((p, i) => `<p class="${i === idx ? "hl" : ""}">${esc(p)}</p>`).join("");
+  const ov = document.createElement("div");
+  ov.className = "overlay";
+  ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Исходный текст документа ${esc(file)}">
+      <div class="modal-h"><b>${esc(file)}</b><button class="ghost" data-close="1">Закрыть</button></div>
+      <div class="modal-b">${body}</div>
+    </div>`;
+  document.body.appendChild(ov);
+  document.body.style.overflow = "hidden";
+  const close = () => { ov.remove(); document.body.style.overflow = ""; };
+  ov.addEventListener("click", e => { if(e.target === ov || e.target.dataset.close) close(); });
+  document.addEventListener("keydown", function onKey(e){
+    if(e.key === "Escape"){ close(); document.removeEventListener("keydown", onKey); }
+  });
+  if(idx >= 0){
+    const el = ov.querySelectorAll("p")[idx];
+    if(el) el.scrollIntoView({block: "center"});
+  }
+}
+
+/* ================= ДЕМО-ДАННЫЕ (1:1 копии documents/*.txt) ================= */
+const F1 = "ДОГОВОР ПОСТАВКИ № STN-101\nДата: 05.02.2026\nСтатус: подписан обеими сторонами 05.02.2026.\n\n1.1. Покупатель: ООО \u00abСеверМет\u00bb. Поставщик: ООО \u00abВектор Прибор\u00bb.\n1.2. Предмет: поставка комплекта измерительного оборудования.\n\n2.1. Общая стоимость поставки составляет 1 200 000 (один миллион двести тысяч) рублей, включая НДС. Указанная сумма — итоговая стоимость договора.\n2.2. Оплата производится в течение 20 календарных дней после приемки оборудования.\n\n3.1. Поставщик обязуется поставить оборудование не позднее 15.04.2026.\n3.2. Дата приемки может отличаться от даты поставки и не изменяет срок по пункту 3.1.\n\n4.1. Неустойка за просрочку поставки составляет 0,1% стоимости просроченной части поставки за каждый день, но не более 10% стоимости этой части.\n\n5.1. Изменения условий действуют после подписания дополнительного соглашения обеими сторонами и наступления указанной в нем даты вступления в силу.";
+const F2 = "ДОПОЛНИТЕЛЬНОЕ СОГЛАШЕНИЕ № 1 К ДОГОВОРУ STN-101\nДата: 01.03.2026\nСтатус: подписано обеими сторонами 01.03.2026.\nПокупатель: ООО \u00abСеверМет\u00bb. Поставщик: ООО \u00abВектор Прибор\u00bb.\n\n1. Пункт 2.1 договора изложить в следующей редакции: \u00abОбщая стоимость поставки составляет 1 380 000 (один миллион триста восемьдесят тысяч) рублей, включая НДС. Указанная сумма — итоговая стоимость договора\u00bb.\n\n2. Пункт 3.1 договора изложить в следующей редакции: \u00abПоставщик обязуется поставить оборудование не позднее 30.04.2026\u00bb.\n\n3. Остальные условия договора, в том числе размер неустойки, остаются без изменений.\n\n4. Настоящее соглашение вступает в силу 01.03.2026.";
+const F3 = "ДОГОВОР ПОСТАВКИ № STN-102\nДата: 10.02.2026\nСтатус: подписан обеими сторонами 10.02.2026.\n\n1.1. Покупатель: ООО \u00abСеверМет\u00bb. Поставщик: ООО \u00abКонтур Электро\u00bb.\n1.2. Предмет: поставка электротехнических комплектующих.\n\n2.1. Общая стоимость поставки составляет 840 000 (восемьсот сорок тысяч) рублей, включая НДС. Указанная сумма — итоговая стоимость договора.\n2.2. Авансовый платеж составляет 252 000 рублей и входит в общую стоимость по пункту 2.1.\n\n3.1. Поставщик обязуется поставить комплектующие не позднее 20.03.2026.\n3.2. Оплата оставшейся суммы производится не позднее 10.04.2026. Этот срок является сроком оплаты, а не поставки.\n\n4.1. Неустойка за просрочку поставки составляет 0,05% стоимости просроченной части поставки за каждый день, но не более 5% стоимости этой части.\n\n5.1. Изменения условий действуют после подписания дополнительного соглашения обеими сторонами и наступления указанной в нем даты вступления в силу.";
+const F4 = "ДОГОВОР ПОСТАВКИ № STN-103\nДата: 20.02.2026\nСтатус: подписан обеими сторонами 20.02.2026.\n\n1.1. Покупатель: ООО \u00abСеверМет\u00bb. Поставщик: ООО \u00abПромСнаб Сервис\u00bb.\n1.2. Предмет: поставка запасных частей.\n\n2.1. Общая стоимость определяется спецификацией в приложении № 1. Приложение № 1 в предоставленный комплект документов не входит. Числовое значение стоимости в тексте договора не указано.\n2.2. Лимит закупки по внутреннему бюджету покупателя — 600 000 рублей. Этот лимит не является согласованной стоимостью договора.\n\n3.1. Поставщик обязуется поставить запасные части не позднее 30.04.2026.\n\n4.1. Ставка неустойки в тексте договора не установлена.\n\n5.1. Изменения условий действуют после подписания дополнительного соглашения обеими сторонами и наступления указанной в нем даты вступления в силу.";
+const F5 = "ПИСЬМО ПОСТАВЩИКА О ПРЕДЛАГАЕМОМ ПЕРЕНОСЕ\nДата: 05.03.2026\nОт: ООО \u00abКонтур Электро\u00bb\nКому: ООО \u00abСеверМет\u00bb\nТема: договор STN-102\n\nКоллеги, по договору STN-102 предлагаем перенести срок поставки с 20.03.2026 на 27.03.2026 из-за задержки комплектующих. Просим подтвердить согласие и оформить дополнительное соглашение.\n\nПо состоянию на 10.03.2026 согласие покупателя не получено, дополнительное соглашение не подписано. Это письмо содержит предложение поставщика, а не согласованное изменение договора.";
+const F6 = "ПРОЕКТ ДОПОЛНИТЕЛЬНОГО СОГЛАШЕНИЯ № 2 К ДОГОВОРУ STN-101\nДата проекта: 06.03.2026\nСтатус: проект на согласовании, не подписан ни одной стороной.\nПокупатель: ООО \u00abСеверМет\u00bb. Поставщик: ООО \u00abВектор Прибор\u00bb.\n\n1. Предлагается изменить общую стоимость поставки на 1 450 000 рублей, включая НДС.\n\n2. Предлагается изменить срок поставки на 10.05.2026.\n\n3. Изменения вступят в силу только после подписания сторонами. По состоянию на 10.03.2026 подписание не состоялось. Данный проект не изменяет действующие условия договора.";
+
+const SAMPLE_DOCS = [
+  { name: "01_contract.txt", text: F1 },
+  { name: "02_amendment_signed.txt", text: F2 },
+  { name: "03_contract.txt", text: F3 },
+  { name: "04_contract.txt", text: F4 },
+  { name: "05_supplier_email.txt", text: F5 },
+  { name: "06_amendment_draft.txt", text: F6 }
+];
+
+/* ================= ИНТЕРФЕЙС ================= */
+let DOCS = [];
+const $ = id => document.getElementById(id);
+
+async function readFile(file){
+  const buf = await file.arrayBuffer();
+  let text = new TextDecoder("utf-8").decode(buf);
+  // если UTF-8 не сошёлся — пробуем cp1251 (частый случай для TXT из Windows)
+  if(text.includes("\uFFFD")){
+    try { text = new TextDecoder("windows-1251").decode(buf); } catch(e) { /* остаёмся на utf-8 */ }
+  }
+  return {name: file.name, text};
+}
+
+function loadFiles(fileList){
+  const files = [...fileList];
+  if(!files.length) return;
+  Promise.all(files.map(readFile)).then(loaded => {
+    RAW.clear();
+    DOCS = loaded.map(d => parseDoc(d.name, d.text));
+    render();
+  }).catch(err => alert("Не удалось прочитать файлы: " + err));
+}
+
+function loadDemo(){
+  RAW.clear();
+  DOCS = SAMPLE_DOCS.map(d => parseDoc(d.name, d.text));
+  render();
+}
+
+function renderEmpty(){
+  const item = (n, t, d) => `<div class="feat-i"><span class="fi">${n}</span><b>${t}</b><p>${d}</p></div>`;
+  return `<div class="card">
+    <h2><span class="step">2</span> Что появится после загрузки</h2>
+    <div class="feat">
+      ${item(1, "Таблица по договорам", "номер, поставщик, сумма в рублях и срок поставки — на выбранную дату проверки.")}
+      ${item(2, "Основание каждого значения", "файл, точная цитата и переход к нужному абзацу исходного текста.")}
+      ${item(3, "Несогласованные документы", "проект допсоглашения и письмо поставщика видны, но условия не меняют.")}
+    </div>
+    <p class="note" style="margin-top:16px">Сейчас документы не загружены. Перетащите TXT-файлы в зону выше или нажмите «Загрузить учебный пример».</p>
+  </div>`;
+}
+
+function render(){
+  const checkDate = $("checkDate").value || CHECK_DEFAULT;
+  const res = analyze(DOCS, checkDate);
+  $("results").innerHTML = DOCS.length
+    ? renderSummary(res) + renderTable(res) + renderUnagreed(res) + renderQuestions(res)
+    : renderEmpty();
+  renderFileList(DOCS);
+}
+
+function renderFileList(list){
+  const box = $("fileList");
+  if(!list.length){ box.innerHTML = '<em class="hint">Файлы не выбраны</em>'; return; }
+  const labels = {contract: "договор", amendment: "допсоглашение/проект", email: "письмо", other: "не распознан"};
+  box.innerHTML = list.map(d => {
+    const cls = d.type === "other" ? "bad" : "loaded";
+    return `<span class="${cls}">${d.type === "other" ? "•" : "✓"} ${esc(d.name)} <span class="muted">· ${labels[d.type] || "—"}</span></span>`;
+  }).join("");
+}
+
+/* drag & drop: реально читаем файлы, а не только подсвечиваем зону */
+(function(){
+  const dz = document.querySelector(".dropzone");
+  if(!dz) return;
+  ["dragenter", "dragover"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add("drag"); }));
+  ["dragleave", "dragend"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove("drag"); }));
+  dz.addEventListener("drop", e => {
+    e.preventDefault();
+    dz.classList.remove("drag");
+    if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) loadFiles(e.dataTransfer.files);
+  });
+})();
+
+$("loadDemo").addEventListener("click", loadDemo);
+$("files").addEventListener("change", e => loadFiles(e.target.files));
+$("checkDate").addEventListener("change", () => { if(DOCS.length) render(); });
+$("results").addEventListener("click", e => {
+  const btn = e.target.closest("[data-file]");
+  if(btn) openViewer(btn.dataset.file, btn.dataset.needle || "");
+});
+
+// Старт: данные не загружены — показываем пояснение, что появится на странице.
+render();
+// Чтобы сразу показывать пример, раскомментируйте строку ниже:
+// loadDemo();
+</script>
+</body>
+</html>
